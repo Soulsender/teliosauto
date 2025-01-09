@@ -8,7 +8,7 @@ fn main() {
     let server: String = String::from("127.0.0.1");
     let port = 4444;
     let config_path = "config.ini";
-    let config_profiles = "Bookmarks_1";
+    let bookmarks = "Bookmarks_1";
 
     // create item to gather config data from mobaxterm
     let config = Config::builder()
@@ -17,9 +17,17 @@ fn main() {
         .unwrap();
 
     // returns a hashmap of key/value pairs in the config
-    let config: HashMap<String, String> = config.get(config_profiles).unwrap();
+    let config: HashMap<String, String> = config.get(bookmarks).unwrap();
 
     println!("Found profiles:");
+    for (key, value) in config {
+        if let Some((device, ip, port)) = get_profile(key, value) {
+            println!("Device: {},IP: {}, Port: {}", device, ip, port);
+        } else {
+            println!("Failed to extract IP and port.");
+        }
+    }
+
     // let results: Vec<(String, String, i32)> = config
     //     .iter()
     //     .filter_map(|(key, value)| get_profile(key, value)) // Only keep matches
@@ -43,10 +51,10 @@ fn main() {
 
 }
 
-fn get_profile(key: &str, value: &str) -> Option<(String, String, i32)> {
+fn get_profile(key: String, value: String) -> Option<(String, String, i32)> {
     let regex_ip = Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}").unwrap();
     let regex_port_and_ip= Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}%\d+").unwrap();
-    let ip = regex_ip.find(value).unwrap().as_str().trim().to_string();
-    let port = regex_port_and_ip.find(value).unwrap().as_str().trim().split('%').nth(1);
-    return Some((key.to_string(), ip, port.unwrap().parse().unwrap()));
+    let ip = regex_ip.find(&value).unwrap().as_str().trim().to_string();
+    let port = regex_port_and_ip.find(&value).unwrap().as_str().trim().split('%').nth(1);
+    Some((key.to_string(), ip, port.unwrap().parse().unwrap()))
 }

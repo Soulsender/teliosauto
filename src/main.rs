@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, result};
 use regex::Regex;
 use config::Config;
 use telnet::Telnet;
@@ -20,35 +20,33 @@ fn main() {
     let config: HashMap<String, String> = config.get(config_profiles).unwrap();
 
     println!("Found profiles:");
-    let results: Vec<(String, String)> = config
-        .iter()
-        .filter_map(|(key, value)| get_profile(key, value)) // Only keep matches
-        .collect();
-
-    for (device, ip) in results {
-        println!("{} {}", device, ip);
-    }
+    // let results: Vec<(String, String, i32)> = config
+    //     .iter()
+    //     .filter_map(|(key, value)| get_profile(key, value)) // Only keep matches
+    //     .collect();
+    // for (device, ip, port) in results {
+    //     println!("{} {} {}", device, ip, port);
+    // }
 
     
 
-    let mut connection = Telnet::connect((server, port), 256)
-        .expect("Couldn't connect to the server...");
+    // let mut connection = Telnet::connect((server, port), 256)
+    //     .expect("Couldn't connect to the server...");
 
-    loop {
-        // connection.write(data).expect("Write Error");
+    // loop {
+    //     // connection.write(data).expect("Write Error");
 
-        let event = connection.read().expect("Read Error");
-        println!("{:?}", event);
+    //     let event = connection.read().expect("Read Error");
+    //     println!("{:?}", event);
 
-    }
+    // }
 
 }
 
-fn get_profile(key: &str, value: &str) -> Option<(String, String)> {
-    let regex = Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}").unwrap();
-    if let Some(mat) = regex.find(value) {
-        let ip = mat.as_str().trim().to_string();
-        return Some((key.to_string(), ip)); // Return the device and IP as Some
-    }
-    None // Return None if no match is found
+fn get_profile(key: &str, value: &str) -> Option<(String, String, i32)> {
+    let regex_ip = Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}").unwrap();
+    let regex_port_and_ip= Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}%\d+").unwrap();
+    let ip = regex_ip.find(value).unwrap().as_str().trim().to_string();
+    let port = regex_port_and_ip.find(value).unwrap().as_str().trim().split('%').nth(1);
+    return Some((key.to_string(), ip, port.unwrap().parse().unwrap()));
 }

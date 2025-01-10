@@ -1,4 +1,4 @@
-use std::{collections::HashMap, result};
+use std::{collections::HashMap, fs::File, io::BufRead, result};
 use regex::{Match, Regex};
 use config::Config;
 use telnet::Telnet;
@@ -13,10 +13,10 @@ fn main() {
     let config = Config::builder()
         .add_source(config::File::with_name(config_path))
         .build()
-        .unwrap();
+        .expect("Unable to load configuration file");
 
     // returns a hashmap of key/value pairs in the config
-    let config: HashMap<String, String> = config.get(bookmarks).unwrap();
+    let config: HashMap<String, String> = config.get(bookmarks).expect("Unable to find bookmarked devices in config file");
 
     println!("Found profiles:");
     for (key, value) in config {
@@ -29,6 +29,13 @@ fn main() {
             continue;
         } else {
             println!("Device: {} {}:{}", name, ip, port);
+            let path = String::from("config/{name}.txt");
+            let file = File::open(path).expect("Unable to open {name}.txt");
+            let reader = io::BufReader::new(file);
+            for x in reader.lines() {
+                let line = x.unwrap();
+                println!("{}", line)
+            }
         }
     }
 

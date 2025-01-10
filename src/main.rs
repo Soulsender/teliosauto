@@ -1,12 +1,11 @@
 use std::{collections::HashMap, result};
-use regex::Regex;
+use regex::{Match, Regex};
 use config::Config;
 use telnet::Telnet;
+use std::io;
 
 fn main() {
     // basic program configurations
-    let server: String = String::from("127.0.0.1");
-    let port = 4444;
     let config_path = "config.ini";
     let bookmarks = "Bookmarks_1";
 
@@ -21,24 +20,23 @@ fn main() {
 
     println!("Found profiles:");
     for (key, value) in config {
-        if let Some((device, ip, port)) = get_profile(key, value) {
-            println!("Device: {},IP: {}, Port: {}", device, ip, port);
+        let profile = match get_profile(key, value) {
+            Ok(profile) => profile,
+            Err(_) => continue,
+        };
+        let (name, ip, port) = profile;
+        if (port == 0) && (ip.is_empty()) {
+            continue;
         } else {
-            println!("Failed to extract IP and port.");
+            println!("Device: {} {}:{}", name, ip, port);
         }
     }
 
-    // let results: Vec<(String, String, i32)> = config
-    //     .iter()
-    //     .filter_map(|(key, value)| get_profile(key, value)) // Only keep matches
-    //     .collect();
-    // for (device, ip, port) in results {
-    //     println!("{} {} {}", device, ip, port);
-    // }
+    
 
     
 
-    // let mut connection = Telnet::connect((server, port), 256)
+    // let mut connection = Telnet::connect((ip, port), 256)
     //     .expect("Couldn't connect to the server...");
 
     // loop {
@@ -51,10 +49,16 @@ fn main() {
 
 }
 
-fn get_profile(key: String, value: String) -> Option<(String, String, i32)> {
+fn get_profile(key: String, value: String) -> Result<(String, String, i32), io::Error> {
     let regex_ip = Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}").unwrap();
     let regex_port_and_ip= Regex::new(r"(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}%\d+").unwrap();
-    let ip = regex_ip.find(&value).unwrap().as_str().trim().to_string();
-    let port = regex_port_and_ip.find(&value).unwrap().as_str().trim().split('%').nth(1);
-    Some((key.to_string(), ip, port.unwrap().parse().unwrap()))
+    let ip = regex_ip.find(&value).unwrap_or_else(|| {
+        eprintln!("Invalid profile IP {key}, skipping...");
+        Regex::new(r"").unwrap().find("").unwrap()
+    }).as_str().trim().to_string();
+    let port = regex_port_and_ip.find(&value).unwrap_or_else(|| {
+        eprintln!("Invalid profile port {key}, skipping...");
+        Regex::new(r"").unwrap().find("").unwrap()
+    }).as_str().trim().split('%').nth(1).unwrap_or_default().parse().unwrap_or_default();
+    Ok((key.to_string(), ip, port))
 }

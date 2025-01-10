@@ -29,8 +29,12 @@ fn main() {
             continue;
         } else {
             println!("Device: {} {}:{}", name, ip, port);
-            let path = String::from("config/{name}.txt");
-            let file = File::open(path).expect("Unable to open {name}.txt");
+            let path = format!("{}.txt", name);
+            println!("{}", path);
+            let file = match File::open(path) {
+                Ok(path) => {println!("Opening {:?}", &path); path},
+                Err(_) => continue,
+            };
             let reader = io::BufReader::new(file);
             for x in reader.lines() {
                 let line = x.unwrap();
@@ -67,5 +71,5 @@ fn get_profile(key: String, value: String) -> Result<(String, String, i32), io::
         eprintln!("Invalid profile port {key}, skipping...");
         Regex::new(r"").unwrap().find("").unwrap()
     }).as_str().trim().split('%').nth(1).unwrap_or_default().parse().unwrap_or_default();
-    Ok((key.to_string(), ip, port))
+    Ok((key.to_string().replace(" ", "_"), ip, port))
 }

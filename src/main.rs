@@ -29,11 +29,10 @@ fn main() {
             continue;
         } else {
             println!("Device: {} {}:{}", name, ip, port);
-            let path = format!("{}.txt", name);
-            println!("{}", path);
-            let file = match File::open(path) {
-                Ok(path) => {println!("Opening {:?}", &path); path},
-                Err(_) => continue,
+            let path = format!("config\\{}.txt", name);
+            let file = match File::open(path.clone().trim()) {
+                Ok(path) => {println!("Opening {}", name); path},
+                Err(err) => {eprintln!("Failed to open file {}: {:?}", path, err); continue;},
             };
             let reader = io::BufReader::new(file);
             for x in reader.lines() {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::BufRead, result};
+use std::{collections::HashMap, fs::File, io::BufRead, net::{IpAddr, SocketAddr}, result};
 use regex::{Match, Regex};
 use config::Config;
 use telnet::Telnet;
@@ -17,9 +17,11 @@ fn main() {
 
     // returns a hashmap of key/value pairs in the config
     let config: HashMap<String, String> = config.get(bookmarks).expect("Unable to find bookmarked devices in config file");
+    
 
     println!("Found profiles:");
     for (key, value) in config {
+        
         let profile = match get_profile(key, value) {
             Ok(profile) => profile,
             Err(_) => continue,
@@ -28,35 +30,21 @@ fn main() {
         if (port == 0) && (ip.is_empty()) {
             continue;
         } else {
-            println!("Device: {} {}:{}", name, ip, port);
+            println!("Device {} {}:{} found", name, ip, port);
             let path = format!("config\\{}.txt", name);
             let file = match File::open(path.clone().trim()) {
                 Ok(path) => {println!("Opening {}", name); path},
-                Err(err) => {eprintln!("Failed to open file {}: {:?}", path, err); continue;},
+                Err(_) => {eprintln!("Failed to open file {path}: skipping..."); continue;},
             };
+            let mut connection = Telnet::connect(SocketAddr::new(ip.parse().unwrap(), port.try_into().unwrap()), 1024)
+                .expect("Couldn't connect to the server...");
             let reader = io::BufReader::new(file);
             for x in reader.lines() {
                 let line = x.unwrap();
-                println!("{}", line)
+                connection.write(line.as_bytes()).expect("Write Error");
             }
         }
     }
-
-    
-
-    
-
-    // let mut connection = Telnet::connect((ip, port), 256)
-    //     .expect("Couldn't connect to the server...");
-
-    // loop {
-    //     // connection.write(data).expect("Write Error");
-
-    //     let event = connection.read().expect("Read Error");
-    //     println!("{:?}", event);
-
-    // }
-
 }
 
 fn get_profile(key: String, value: String) -> Result<(String, String, i32), io::Error> {

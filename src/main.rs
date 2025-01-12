@@ -41,7 +41,7 @@ fn main() {
             let reader = io::BufReader::new(file);
             for x in reader.lines() {
                 let line = x.unwrap();
-                connection.write(line.as_bytes()).expect("Write Error");
+                connection.write(format!("{line} \n").as_bytes()).expect("Write Error");
             }
         }
     }

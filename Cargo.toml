@@ -2,6 +2,9 @@
 name = "teliosauto"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/Soulsender/teliosauto"
+license = "GPL 3.0"
+authors = ["Soulsender <soul@soulsender.me>"]
 
 [dependencies]
 config = "0.15.4"

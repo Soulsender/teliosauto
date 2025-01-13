@@ -3,20 +3,37 @@ use regex::Regex;
 use config::Config;
 use telnet::Telnet;
 use std::io;
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[arg(short, long, required = true, help = "Path to your MobaXTerm .ini config")]
+    config: Option<String>,
+
+    #[arg(short, long, required = true, help = "Path to your device config files")]
+    devices: Option<String>,
+
+    #[arg(short, long, default_value = "Bookmarks", required = false, help = "Optional tag in MobaXTerm .ini config")]
+    tag: Option<String>,
+}
 
 fn main() {
+    let args = Cli::parse();
+
     // basic program configurations
-    let config_path = "config.ini";
-    let bookmarks = "Bookmarks_1";
+    let config_path = args.config.unwrap();
+    let devices_path = args.devices.unwrap();
+    let bookmarks = args.tag.unwrap();
 
     // create item to gather config data from mobaxterm
     let config = Config::builder()
-        .add_source(config::File::with_name(config_path))
+        .add_source(config::File::with_name(&config_path))
         .build()
         .expect("Unable to load configuration file");
 
     // returns a hashmap of key/value pairs in the config
-    let config: HashMap<String, String> = config.get(bookmarks).expect("Unable to find bookmarked devices in config file");
+    let config: HashMap<String, String> = config.get(&bookmarks).expect("Unable to find bookmarked devices in config file");
     
 
     println!("Found profiles:");
@@ -37,7 +54,7 @@ fn main() {
             println!("Device {} {}:{} found", name, ip, port);
 
             // gather path data to device config files
-            let path = format!("config\\{}.txt", name);
+            let path = format!("{}{}.txt", devices_path, name);
             let file = match File::open(path.clone().trim()) {
                 Ok(path) => {println!("Opening {}", name); path},
                 Err(_) => {eprintln!("Failed to open file {path}: skipping..."); continue;},

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::BufRead, net::SocketAddr};
+use std::{collections::HashMap, fs::File, io::BufRead, net::SocketAddr, path::Path};
 use regex::Regex;
 use config::Config;
 use telnet::Telnet;
@@ -11,10 +11,10 @@ struct Cli {
     #[arg(short, long, required = true, help = "Path to your MobaXTerm .ini config")]
     config: Option<String>,
 
-    #[arg(short, long, required = true, help = "Path to your device config files")]
+    #[arg(short, long, required = true, help = "Path to your device config files (use / or \\ at the end)\n(ex. ./path/to/devices/)")]
     devices: Option<String>,
 
-    #[arg(short, long, default_value = "Bookmarks", required = false, help = "Optional tag in MobaXTerm .ini config")]
+    #[arg(short, long, default_value = "Bookmarks", required = false, help = "Optional tag in MobaXTerm .ini config\nBy default searches for \"Bookmarks\"")]
     tag: Option<String>,
 }
 

@@ -1,6 +1,3 @@
-hello
-world
-this
-is
-a
-test
+enable
+conf t
+hostname ConfiguredByTeliosAuto

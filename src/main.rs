@@ -5,17 +5,21 @@ use telnet::Telnet;
 use std::io;
 use clap::Parser;
 
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
     #[arg(short, long, required = true, help = "Path to your MobaXTerm .ini config")]
     config: Option<String>,
 
-    #[arg(short, long, required = true, help = "Path to your device config files (use / or \\ at the end)\n(ex. ./path/to/devices/)")]
+    #[arg(short, long, required = true, help = "Path to your device config files\n(ex. ./path/to/devices/)")]
     devices: Option<String>,
 
-    #[arg(short, long, default_value = "Bookmarks", required = false, help = "Optional tag in MobaXTerm .ini config\nBy default searches for \"Bookmarks\"")]
+    #[arg(short, long, default_value = "Bookmarks", required = false, help = "(Optional) header tag in MobaXTerm .ini config\nBy default searches for \"[Bookmarks]\"")]
     tag: Option<String>,
+
+    #[arg(short, long, default_value = "conf", required = false, help = "(Optional) File extension for your device config\nBy default searches for \".conf\"")]
+    extension: Option<String>,
 }
 
 fn main() {
@@ -23,8 +27,10 @@ fn main() {
 
     // basic program configurations
     let config_path = args.config.unwrap();
-    let devices_path = args.devices.unwrap();
+    let x = args.devices.unwrap();
+    let device_path = Path::new(x.as_str());
     let bookmarks = args.tag.unwrap();
+    let extension = args.extension.unwrap();
 
     // create item to gather config data from mobaxterm
     let config = Config::builder()
@@ -35,8 +41,6 @@ fn main() {
     // returns a hashmap of key/value pairs in the config
     let config: HashMap<String, String> = config.get(&bookmarks).expect("Unable to find bookmarked devices in config file");
     
-
-    println!("Found profiles:");
     for (key, value) in config {
         // for each profile found in config
         // gather name, ip, and port
@@ -50,19 +54,25 @@ fn main() {
         if port == 0 {
             continue;
         } else {
-            // print valid bookmarked devices found
-            println!("Device {} {}:{} found", name, ip, port);
 
             // gather path data to device config files
-            let path = format!("{}{}.txt", devices_path, name);
-            let file = match File::open(path.clone().trim()) {
-                Ok(path) => {println!("Opening {}", name); path},
-                Err(_) => {eprintln!("Failed to open file {path}: skipping..."); continue;},
+            let path = device_path.join(format!("{}.{}", name, extension));
+            let pretty_path = format!("{name} @ {ip}:{port}");
+
+            // open device config file
+            let file = match File::open(path) {
+                Ok(path) => {println!("Opening {pretty_path} with path {device_path:?}"); path},
+                Err(_) => continue,
             };
 
             // create telnet socket
-            let mut connection = Telnet::connect(SocketAddr::new(ip.parse().unwrap(), port.try_into().unwrap()), 1024)
-                .expect("Couldn't connect to the server...");
+            let mut connection = match Telnet::connect(SocketAddr::new(ip.parse().unwrap(), port.try_into().unwrap()), 1024) {
+                Ok(x) => {println!("Connected to {pretty_path}"); x},
+                Err(error) => match error.kind() {
+                    std::io::ErrorKind::ConnectionRefused => {eprintln!("The connection to the server was refused!"); return},
+                    _ => panic!("Unexpected error {}", error),
+                },
+            };
 
             // read lines from device config files and write that data through telnet
             let reader = io::BufReader::new(file);
@@ -70,6 +80,8 @@ fn main() {
                 let line = x.unwrap();
                 connection.write(format!("{line} \n").as_bytes()).expect("Write Error");
             }
+
+            println!("Done")
         }
     }
 }
@@ -83,11 +95,9 @@ fn get_profile(key: String, value: String) -> Result<(String, String, i32), io::
     
     // check if strings match regex
     let ip = regex_ip.find(&value).unwrap_or_else(|| {
-        eprintln!("Invalid profile IP {key}, skipping...");
         Regex::new(r"").unwrap().find("").unwrap()
     }).as_str().trim().to_string();
     let port = regex_port_and_ip.find(&value).unwrap_or_else(|| {
-        eprintln!("Invalid profile port {key}, skipping...");
         Regex::new(r"").unwrap().find("").unwrap()
     }).as_str().trim().split('%').nth(1).unwrap_or_default().parse().unwrap_or_default();
 
